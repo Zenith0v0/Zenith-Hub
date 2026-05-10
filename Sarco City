@@ -13,6 +13,7 @@ gui.Parent = plr:WaitForChild("PlayerGui")
 ----------------------------------------------------------------
 
 local adminDetectionEnabled = true
+local infiniteJumpEnabled = true
 
 local adminIds = {
 	[55245375] = true,
@@ -64,7 +65,6 @@ local positions = {
 	Vector3.new(166,12,70),
 	Vector3.new(151,14,-7),
 	Vector3.new(83,12,128),
-
 	Vector3.new(218,14,338),
 	Vector3.new(287,11,241),
 	Vector3.new(602,13,-312),
@@ -109,7 +109,6 @@ task.spawn(function()
 		):Play()
 
 		i += 1
-
 		if i > #neonColors then
 			i = 1
 		end
@@ -215,34 +214,174 @@ txt.Font = Enum.Font.GothamBlack
 txt.TextSize = 48
 txt.TextColor3 = Color3.new(1,1,1)
 
-local function tp(pos)
+
+	----------------------------------------------------------------
+-- MOVEMENT SYSTEM
+----------------------------------------------------------------
+
+local moving = false
+local noclip = false
+
+game:GetService("RunService").Stepped:Connect(function()
+
+	if noclip and plr.Character then
+
+		for _, part in pairs(plr.Character:GetDescendants()) do
+
+			if part:IsA("BasePart") then
+				part.CanCollide = false
+			end
+		end
+	end
+end)
+
+UIS.JumpRequest:Connect(function()
+
+	if infiniteJumpEnabled then
+
+		local character = plr.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+
+		if humanoid then
+			humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+		end
+	end
+end)
+
+local function tp(pos, buttonStroke)
+
+	if moving then return end
+	moving = true
+	noclip = true
+
 	local c = plr.Character or plr.CharacterAdded:Wait()
+	local humanoid = c:WaitForChild("Humanoid")
 	local root = c:WaitForChild("HumanoidRootPart")
+
+	----------------------------------------------------------------
+	-- SPEED
+	----------------------------------------------------------------
+
+	humanoid.WalkSpeed = 43
+
+	----------------------------------------------------------------
+	-- GREEN OUTLINE
+	----------------------------------------------------------------
+
+	if buttonStroke then
+		buttonStroke.Color = Color3.fromRGB(0,255,0)
+	end
 
 	overlay.Visible = true
 
-	task.spawn(function()
-		local d = ""
+	----------------------------------------------------------------
+	-- 4 STEP MOVEMENT
+	----------------------------------------------------------------
 
-		while overlay.Visible do
-			d = d == "..." and "" or d .. "."
-			txt.Text = "TELEPORTING" .. d
-			task.wait(.3)
-		end
-	end)
+	local startPos = root.Position
 
-	local t = TweenService:Create(
-		root,
-		TweenInfo.new(13, Enum.EasingStyle.Sine),
-		{CFrame = CFrame.new(pos)}
-	)
+	local steps = {
+		startPos:Lerp(pos, 0.25),
+		startPos:Lerp(pos, 0.50),
+		startPos:Lerp(pos, 0.75),
+		pos
+	}
 
-	t:Play()
-	t.Completed:Wait()
+	for i, stepPos in ipairs(steps) do
 
-	overlay.Visible = false
+	txt.Text = "STEP " .. i .. "/4"
+
+	humanoid:MoveTo(stepPos)
+
+	local reached = false
+local connection
+
+connection = humanoid.MoveToFinished:Connect(function()
+	reached = true
+
+	if connection then
+		connection:Disconnect()
+	end
+end)
+
+----------------------------------------------------------------
+-- WAIT UNTIL POSITION OR TIMEOUT
+----------------------------------------------------------------
+
+local timeout = os.clock() + 8
+
+repeat
+	task.wait()
+
+	local distance = (root.Position - stepPos).Magnitude
+
+	if distance <= 4 then
+		reached = true
+	end
+
+	if os.clock() > timeout then
+		reached = true
+	end
+
+until reached
+	----------------------------------------------------------------
+	-- FORCE EXACT POSITION
+	----------------------------------------------------------------
+
+	local safeStepPos = stepPos + Vector3.new(0, 6, 0)
+
+local platform = Instance.new("Part")
+platform.Size = Vector3.new(10,1,10)
+platform.Anchored = true
+platform.CanCollide = true
+platform.Transparency = 1
+platform.Position = safeStepPos - Vector3.new(0,4,0)
+platform.Parent = workspace
+
+game:GetService("Debris"):AddItem(platform, 6)
+
+root.AssemblyLinearVelocity = Vector3.zero
+root.CFrame = CFrame.new(safeStepPos)
+	task.wait(0.3)
 end
 
+----------------------------------------------------------------
+-- FORCE FINAL EXACT POSITION
+----------------------------------------------------------------
+
+local finalPos = pos + Vector3.new(0, 6, 0)
+
+local finalPlatform = Instance.new("Part")
+finalPlatform.Size = Vector3.new(10,1,10)
+finalPlatform.Anchored = true
+finalPlatform.CanCollide = true
+finalPlatform.Transparency = 1
+finalPlatform.Position = finalPos - Vector3.new(0,4,0)
+finalPlatform.Parent = workspace
+
+game:GetService("Debris"):AddItem(finalPlatform, 6)
+
+root.AssemblyLinearVelocity = Vector3.zero
+root.CFrame = CFrame.new(finalPos)
+
+task.wait(0.2)
+
+overlay.Visible = false
+	----------------------------------------------------------------
+	-- RED OUTLINE ON ARRIVAL
+	----------------------------------------------------------------
+
+	if buttonStroke then
+		buttonStroke.Color = Color3.fromRGB(255,0,0)
+	end
+
+	----------------------------------------------------------------
+	-- TURN OFF NOCLIP
+	----------------------------------------------------------------
+
+	noclip = false
+	moving = false
+end
 ----------------------------------------------------------------
 -- SCROLL
 ----------------------------------------------------------------
@@ -291,10 +430,15 @@ for i,pos in ipairs(positions) do
 		b.BackgroundColor3 = Color3.fromRGB(255,120,220)
 	end
 
+	local stroke = Instance.new("UIStroke")
+	stroke.Thickness = 3
+	stroke.Color = Color3.fromRGB(0,255,0)
+	stroke.Parent = b
+
 	b.Parent = scroll
 
 	b.MouseButton1Click:Connect(function()
-		tp(pos)
+		tp(pos, stroke)
 	end)
 end
 
