@@ -1,0 +1,370 @@
+local TweenService = game:GetService("TweenService")
+local UIS = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local plr = Players.LocalPlayer
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "Zenith"
+gui.Parent = plr:WaitForChild("PlayerGui")
+
+----------------------------------------------------------------
+-- STATE
+----------------------------------------------------------------
+
+local adminDetectionEnabled = true
+
+local adminIds = {
+	[55245375] = true,
+	[27543964] = true
+}
+
+----------------------------------------------------------------
+-- WARNING SYSTEM
+----------------------------------------------------------------
+
+local warnBar = Instance.new("Frame", gui)
+warnBar.Size = UDim2.new(0,400,0,40)
+warnBar.Position = UDim2.new(0.5,-200,1,-60)
+warnBar.BackgroundColor3 = Color3.fromRGB(255,60,90)
+warnBar.Visible = false
+Instance.new("UICorner", warnBar).CornerRadius = UDim.new(0,10)
+
+local warnText = Instance.new("TextLabel", warnBar)
+warnText.Size = UDim2.new(1,0,1,0)
+warnText.BackgroundTransparency = 1
+warnText.TextColor3 = Color3.new(1,1,1)
+warnText.Font = Enum.Font.GothamBold
+warnText.TextSize = 14
+
+local function showWarning(name)
+	warnText.Text = "⚠ ADMIN JOIN DETECTED: " .. name
+	warnBar.Visible = true
+	task.wait(4)
+	warnBar.Visible = false
+end
+
+Players.PlayerAdded:Connect(function(player)
+	if adminDetectionEnabled and adminIds[player.UserId] then
+		showWarning(player.Name)
+	end
+end)
+
+----------------------------------------------------------------
+-- DATA
+----------------------------------------------------------------
+
+local positions = {
+	Vector3.new(590,12,-265),
+	Vector3.new(719,12,-372),
+	Vector3.new(600,12,-346),
+	Vector3.new(616,75,-131),
+	Vector3.new(704,12,-61),
+	Vector3.new(281,14,-18),
+	Vector3.new(166,12,70),
+	Vector3.new(151,14,-7),
+	Vector3.new(83,12,128),
+
+	Vector3.new(218,14,338),
+	Vector3.new(287,11,241),
+	Vector3.new(602,13,-312),
+	Vector3.new(-212,49,554)
+}
+
+local labels = {
+	"ZENITH ATM 1","ZENITH ATM 2","ZENITH ATM 3","ZENITH ATM 4","ZENITH ATM 5",
+	"ZENITH ATM 6","ZENITH ATM 7","ZENITH ATM 8","ZENITH ATM 9",
+	"ZENITH ATM 10","ZENITH ATM 11",
+	"CARD SHOP","CLAIM ZONE"
+}
+
+----------------------------------------------------------------
+-- OUTER FRAME
+----------------------------------------------------------------
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,420,0,430)
+frame.Position = UDim2.new(.5,-210,.5,-215)
+frame.BackgroundColor3 = Color3.fromRGB(110,60,200)
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0,18)
+
+----------------------------------------------------------------
+-- NEON BORDER PULSE
+----------------------------------------------------------------
+
+local neonColors = {
+	Color3.fromRGB(110,60,200),
+	Color3.fromRGB(140,90,230),
+	Color3.fromRGB(90,50,170)
+}
+
+task.spawn(function()
+	local i = 1
+
+	while true do
+		TweenService:Create(
+			frame,
+			TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+			{BackgroundColor3 = neonColors[i]}
+		):Play()
+
+		i += 1
+
+		if i > #neonColors then
+			i = 1
+		end
+
+		task.wait(1.2)
+	end
+end)
+
+----------------------------------------------------------------
+-- INNER PANEL
+----------------------------------------------------------------
+
+local inner = Instance.new("Frame", frame)
+inner.Size = UDim2.new(1,-10,1,-10)
+inner.Position = UDim2.new(0,5,0,5)
+inner.BackgroundColor3 = Color3.fromRGB(25,18,40)
+inner.BackgroundTransparency = 0.25
+inner.BorderSizePixel = 0
+Instance.new("UICorner", inner).CornerRadius = UDim.new(0,16)
+
+----------------------------------------------------------------
+-- HEADER
+----------------------------------------------------------------
+
+local header = Instance.new("Frame", inner)
+header.Size = UDim2.new(1,0,0,40)
+header.BackgroundColor3 = Color3.fromRGB(25,25,25)
+header.BorderSizePixel = 0
+
+local headerCorner = Instance.new("UICorner")
+headerCorner.CornerRadius = UDim.new(0,18)
+headerCorner.Parent = header
+
+local fix = Instance.new("Frame", header)
+fix.Size = UDim2.new(1,0,0,18)
+fix.Position = UDim2.new(0,0,1,-18)
+fix.BackgroundColor3 = header.BackgroundColor3
+fix.BorderSizePixel = 0
+
+local title = Instance.new("TextLabel", header)
+title.Size = UDim2.new(1,0,1,0)
+title.BackgroundTransparency = 1
+title.Text = "ZENITH"
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 20
+title.TextColor3 = Color3.new(1,1,1)
+
+----------------------------------------------------------------
+-- ADMIN TOGGLE
+----------------------------------------------------------------
+
+local adminToggle = Instance.new("TextButton", header)
+adminToggle.Size = UDim2.new(0,160,0,30)
+adminToggle.Position = UDim2.new(0,10,0,5)
+adminToggle.Font = Enum.Font.GothamBold
+adminToggle.TextSize = 12
+adminToggle.TextColor3 = Color3.new(1,1,1)
+adminToggle.BorderSizePixel = 0
+Instance.new("UICorner", adminToggle).CornerRadius = UDim.new(1,0)
+
+local function updateToggle()
+	adminToggle.Text = adminDetectionEnabled and "ADMIN DETECTION: ON" or "ADMIN DETECTION: OFF"
+	adminToggle.BackgroundColor3 = adminDetectionEnabled
+		and Color3.fromRGB(255,80,120)
+		or Color3.fromRGB(80,80,80)
+end
+
+updateToggle()
+
+adminToggle.MouseButton1Click:Connect(function()
+	adminDetectionEnabled = not adminDetectionEnabled
+	updateToggle()
+end)
+
+----------------------------------------------------------------
+-- OPEN/CLOSE BUTTON
+----------------------------------------------------------------
+
+local toggleButton = Instance.new("TextButton", header)
+toggleButton.Size = UDim2.new(0,30,0,30)
+toggleButton.Position = UDim2.new(1,-40,0,5)
+toggleButton.BackgroundColor3 = Color3.fromRGB(255,60,60)
+toggleButton.Text = "X"
+toggleButton.Font = Enum.Font.GothamBlack
+toggleButton.TextSize = 16
+toggleButton.TextColor3 = Color3.new(1,1,1)
+toggleButton.BorderSizePixel = 0
+Instance.new("UICorner", toggleButton).CornerRadius = UDim.new(1,0)
+
+----------------------------------------------------------------
+-- TELEPORT OVERLAY
+----------------------------------------------------------------
+
+local overlay = Instance.new("Frame", gui)
+overlay.Size = UDim2.new(1,0,1,0)
+overlay.BackgroundColor3 = Color3.fromRGB(120,0,180)
+overlay.Visible = false
+
+local txt = Instance.new("TextLabel", overlay)
+txt.Size = UDim2.new(1,0,1,0)
+txt.BackgroundTransparency = 1
+txt.Font = Enum.Font.GothamBlack
+txt.TextSize = 48
+txt.TextColor3 = Color3.new(1,1,1)
+
+local function tp(pos)
+	local c = plr.Character or plr.CharacterAdded:Wait()
+	local root = c:WaitForChild("HumanoidRootPart")
+
+	overlay.Visible = true
+
+	task.spawn(function()
+		local d = ""
+
+		while overlay.Visible do
+			d = d == "..." and "" or d .. "."
+			txt.Text = "TELEPORTING" .. d
+			task.wait(.3)
+		end
+	end)
+
+	local t = TweenService:Create(
+		root,
+		TweenInfo.new(13, Enum.EasingStyle.Sine),
+		{CFrame = CFrame.new(pos)}
+	)
+
+	t:Play()
+	t.Completed:Wait()
+
+	overlay.Visible = false
+end
+
+----------------------------------------------------------------
+-- SCROLL
+----------------------------------------------------------------
+
+local scroll = Instance.new("ScrollingFrame", inner)
+scroll.Size = UDim2.new(1,-20,0,260)
+scroll.Position = UDim2.new(0,10,0,50)
+scroll.BackgroundTransparency = 1
+scroll.ScrollBarThickness = 8
+scroll.ScrollingDirection = Enum.ScrollingDirection.Y
+scroll.Active = true
+scroll.ClipsDescendants = true
+scroll.AutomaticCanvasSize = Enum.AutomaticSize.None
+scroll.CanvasSize = UDim2.new(0,0,0,0)
+
+local grid = Instance.new("UIGridLayout", scroll)
+grid.CellSize = UDim2.new(0,120,0,60)
+grid.CellPadding = UDim2.new(0,15,0,15)
+grid.FillDirectionMaxCells = 3
+grid.SortOrder = Enum.SortOrder.LayoutOrder
+
+grid:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	scroll.CanvasSize = UDim2.new(0,0,0,grid.AbsoluteContentSize.Y + 20)
+end)
+
+----------------------------------------------------------------
+-- BUTTONS
+----------------------------------------------------------------
+
+for i,pos in ipairs(positions) do
+	local b = Instance.new("TextButton")
+	b.LayoutOrder = i
+	b.Size = UDim2.new(0,120,0,60)
+	b.Font = Enum.Font.GothamBold
+	b.TextSize = 14
+	b.TextColor3 = Color3.new(1,1,1)
+	b.Text = labels[i] or ("ZENITH ATM " .. i)
+	b.BorderSizePixel = 0
+	Instance.new("UICorner", b).CornerRadius = UDim.new(0,12)
+
+	if labels[i] == "CLAIM ZONE" then
+		b.BackgroundColor3 = Color3.fromRGB(255,80,140)
+	elseif labels[i] == "CARD SHOP" then
+		b.BackgroundColor3 = Color3.fromRGB(255,150,200)
+	else
+		b.BackgroundColor3 = Color3.fromRGB(255,120,220)
+	end
+
+	b.Parent = scroll
+
+	b.MouseButton1Click:Connect(function()
+		tp(pos)
+	end)
+end
+
+----------------------------------------------------------------
+-- OPEN/CLOSE FUNCTION
+----------------------------------------------------------------
+
+local minimized = false
+local fullSize = frame.Size
+
+toggleButton.MouseButton1Click:Connect(function()
+	minimized = not minimized
+
+	if minimized then
+		toggleButton.Text = "+"
+		scroll.Visible = false
+		adminToggle.Visible = false
+
+		TweenService:Create(
+			frame,
+			TweenInfo.new(0.25, Enum.EasingStyle.Sine),
+			{Size = UDim2.new(0,420,0,50)}
+		):Play()
+	else
+		toggleButton.Text = "X"
+
+		TweenService:Create(
+			frame,
+			TweenInfo.new(0.25, Enum.EasingStyle.Sine),
+			{Size = fullSize}
+		):Play()
+
+		task.wait(0.25)
+
+		scroll.Visible = true
+		adminToggle.Visible = true
+	end
+end)
+
+----------------------------------------------------------------
+-- DRAG SYSTEM
+----------------------------------------------------------------
+
+local dragging = false
+local dragStart
+local startPos
+
+header.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = frame.Position
+	end
+end)
+
+UIS.InputChanged:Connect(function(input)
+	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = input.Position - dragStart
+
+		frame.Position = UDim2.new(
+			startPos.X.Scale,
+			startPos.X.Offset + delta.X,
+			startPos.Y.Scale,
+			startPos.Y.Offset + delta.Y
+		)
+	end
+end)
+
+UIS.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
+end)
