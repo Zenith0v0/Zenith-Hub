@@ -286,30 +286,14 @@ txt.TextSize = 48
 txt.TextColor3 = Color3.new(1,1,1)
 
 
-	----------------------------------------------------------------
+----------------------------------------------------------------
 -- MOVEMENT SYSTEM
 ----------------------------------------------------------------
 
 local moving = false
-local noclip = false
-
-game:GetService("RunService").Stepped:Connect(function()
-
-	if noclip and plr.Character then
-
-		for _, part in pairs(plr.Character:GetDescendants()) do
-
-			if part:IsA("BasePart") then
-				part.CanCollide = false
-			end
-		end
-	end
-end)
 
 UIS.JumpRequest:Connect(function()
-
 	if infiniteJumpEnabled then
-
 		local character = plr.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 
@@ -319,25 +303,25 @@ UIS.JumpRequest:Connect(function()
 	end
 end)
 
-local function tp(pos, buttonStroke, label)
+local function makeSafePlatform(pos, size, life)
+	local p = Instance.new("Part")
+	p.Size = size or Vector3.new(16, 1, 16)
+	p.Anchored = true
+	p.CanCollide = true
+	p.Transparency = 1
+	p.Position = pos - Vector3.new(0, 4, 0)
+	p.Name = "ZenithSafePlatform"
+	p.Parent = workspace
+	game:GetService("Debris"):AddItem(p, life or 12)
+	return p
+end
 
+local function tp(pos, buttonStroke, label)
 	if moving then return end
 	moving = true
-	noclip = true
 
 	local c = plr.Character or plr.CharacterAdded:Wait()
-	local humanoid = c:WaitForChild("Humanoid")
 	local root = c:WaitForChild("HumanoidRootPart")
-
-	----------------------------------------------------------------
-	-- SPEED
-	----------------------------------------------------------------
-
-	humanoid.WalkSpeed = 43
-
-	----------------------------------------------------------------
-	-- GREEN OUTLINE
-	----------------------------------------------------------------
 
 	if buttonStroke then
 		buttonStroke.Color = Color3.fromRGB(0,255,0)
@@ -345,120 +329,63 @@ local function tp(pos, buttonStroke, label)
 
 	overlay.Visible = true
 
-	----------------------------------------------------------------
-	-- 4 STEP MOVEMENT
-	----------------------------------------------------------------
-
 	local startPos = root.Position
+	local safeHeight = 6
 
 	local steps = {
-		startPos:Lerp(pos, 0.25),
-		startPos:Lerp(pos, 0.50),
-		startPos:Lerp(pos, 0.75),
-		pos
-	}
+	startPos:Lerp(pos, 0.16) + Vector3.new(0, safeHeight, 0),
+	startPos:Lerp(pos, 0.33) + Vector3.new(0, safeHeight, 0),
+	startPos:Lerp(pos, 0.50) + Vector3.new(0, safeHeight, 0),
+	startPos:Lerp(pos, 0.66) + Vector3.new(0, safeHeight, 0),
+	startPos:Lerp(pos, 0.83) + Vector3.new(0, safeHeight, 0),
+	pos + Vector3.new(0, safeHeight, 0)
+}
 
 	for i, stepPos in ipairs(steps) do
+		txt.Text = "STEP " .. i .. "/6"
 
-	txt.Text = "STEP " .. i .. "/4"
+		makeSafePlatform(stepPos, Vector3.new(18,1,18), 15)
 
-	humanoid:MoveTo(stepPos)
+		root.AssemblyLinearVelocity = Vector3.zero
+		root.AssemblyAngularVelocity = Vector3.zero
+		root.Anchored = true
 
-	local reached = false
-local connection
+		local startCFrame = root.CFrame
+		local goalCFrame = CFrame.new(stepPos)
+		local slideTime = 1
+		local startTime = os.clock()
 
-connection = humanoid.MoveToFinished:Connect(function()
-	reached = true
+		while os.clock() - startTime < slideTime do
+			local alpha = (os.clock() - startTime) / slideTime
+			root.CFrame = startCFrame:Lerp(goalCFrame, alpha)
+			task.wait()
+		end
 
-	if connection then
-		connection:Disconnect()
-	end
-end)
-
-----------------------------------------------------------------
--- WAIT UNTIL POSITION OR TIMEOUT
-----------------------------------------------------------------
-
-local timeout = os.clock() + 8
-
-repeat
-	task.wait()
-
-	local distance = (root.Position - stepPos).Magnitude
-
-	if distance <= 4 then
-		reached = true
+		root.CFrame = goalCFrame
+		task.wait(0.15)
 	end
 
-	if os.clock() > timeout then
-		reached = true
+	local finalOffset = 6
+	local platformSize = Vector3.new(18,1,18)
+
+	if label == "CLAIM ZONE" then
+		finalOffset = 18
+		platformSize = Vector3.new(24,1,24)
 	end
 
-until reached
-	----------------------------------------------------------------
-	-- FORCE EXACT POSITION
-	----------------------------------------------------------------
+	local finalPos = pos + Vector3.new(0, finalOffset, 0)
+	makeSafePlatform(finalPos, platformSize, 20)
 
-	local safeStepPos = stepPos + Vector3.new(0, 6, 0)
+	root.CFrame = CFrame.new(finalPos)
+	task.wait(0.25)
 
-local platform = Instance.new("Part")
-platform.Size = Vector3.new(10,1,10)
-platform.Anchored = true
-platform.CanCollide = true
-platform.Transparency = 1
-platform.Position = safeStepPos - Vector3.new(0,4,0)
-platform.Parent = workspace
-
-game:GetService("Debris"):AddItem(platform, 6)
-
-root.AssemblyLinearVelocity = Vector3.zero
-root.CFrame = CFrame.new(safeStepPos)
-	task.wait(0.3)
-end
-
-----------------------------------------------------------------
--- FORCE FINAL EXACT POSITION
-----------------------------------------------------------------
-
-local finalOffset = 6
-local platformSize = Vector3.new(10,1,10)
-
-if label == "CLAIM ZONE" then
-	finalOffset = 18
-	platformSize = Vector3.new(18,1,18)
-end
-
-local finalPos = pos + Vector3.new(0, finalOffset, 0)
-
-local finalPlatform = Instance.new("Part")
-finalPlatform.Size = platformSize
-finalPlatform.Anchored = true
-finalPlatform.CanCollide = true
-finalPlatform.Transparency = 1
-finalPlatform.Position = finalPos - Vector3.new(0,4,0)
-finalPlatform.Parent = workspace
-
-game:GetService("Debris"):AddItem(finalPlatform, 8)
-
-root.AssemblyLinearVelocity = Vector3.zero
-root.CFrame = CFrame.new(finalPos)
-
-task.wait(0.2)
-
-overlay.Visible = false
-	----------------------------------------------------------------
-	-- RED OUTLINE ON ARRIVAL
-	----------------------------------------------------------------
+	root.Anchored = false
+	overlay.Visible = false
 
 	if buttonStroke then
 		buttonStroke.Color = Color3.fromRGB(255,0,0)
 	end
 
-	----------------------------------------------------------------
-	-- TURN OFF NOCLIP
-	----------------------------------------------------------------
-
-	noclip = false
 	moving = false
 end
 ----------------------------------------------------------------
