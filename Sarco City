@@ -3,10 +3,81 @@ local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local plr = Players.LocalPlayer
+local REQUIRED_KEYS = {
+	["ZENITH2026"] = true,
+	["PURPLEZ"] = true,
+	["ADMIN123"] = true,
+	["GQE8PG2IA5"] = true
+}
+local playerGui = plr:WaitForChild("PlayerGui")
+
+local keyGui = Instance.new("ScreenGui")
+keyGui.Name = "ZenithKey"
+keyGui.Parent = playerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0,300,0,160)
+frame.Position = UDim2.new(0.5,-150,0.5,-80)
+frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+frame.Parent = keyGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0,14)
+corner.Parent = frame
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1,0,0,40)
+title.BackgroundTransparency = 1
+title.Text = "ENTER KEY"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 22
+title.TextColor3 = Color3.new(1,1,1)
+title.Parent = frame
+
+local box = Instance.new("TextBox")
+box.Size = UDim2.new(0.8,0,0,40)
+box.Position = UDim2.new(0.1,0,0.38,0)
+box.PlaceholderText = "Key..."
+box.Text = ""
+box.Font = Enum.Font.Gotham
+box.TextSize = 18
+box.TextColor3 = Color3.new(1,1,1)
+box.BackgroundColor3 = Color3.fromRGB(35,35,35)
+box.Parent = frame
+
+local boxCorner = Instance.new("UICorner")
+boxCorner.CornerRadius = UDim.new(0,10)
+boxCorner.Parent = box
+
+local submit = Instance.new("TextButton")
+submit.Size = UDim2.new(0.8,0,0,36)
+submit.Position = UDim2.new(0.1,0,0.7,0)
+submit.Text = "UNLOCK"
+submit.Font = Enum.Font.GothamBold
+submit.TextSize = 18
+submit.TextColor3 = Color3.new(1,1,1)
+submit.BackgroundColor3 = Color3.fromRGB(120,0,255)
+submit.Parent = frame
+
+local submitCorner = Instance.new("UICorner")
+submitCorner.CornerRadius = UDim.new(0,10)
+submitCorner.Parent = submit
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "Zenith"
-gui.Parent = plr:WaitForChild("PlayerGui")
+gui.Enabled = false
+gui.Parent = playerGui
+
+submit.MouseButton1Click:Connect(function()
+
+	if REQUIRED_KEYS[box.Text] then
+		gui.Enabled = true
+		keyGui:Destroy()
+	else
+		box.Text = ""
+		box.PlaceholderText = "WRONG KEY"
+	end
+end)
 
 ----------------------------------------------------------------
 -- STATE
@@ -248,7 +319,7 @@ UIS.JumpRequest:Connect(function()
 	end
 end)
 
-local function tp(pos, buttonStroke)
+local function tp(pos, buttonStroke, label)
 
 	if moving then return end
 	moving = true
@@ -349,17 +420,25 @@ end
 -- FORCE FINAL EXACT POSITION
 ----------------------------------------------------------------
 
-local finalPos = pos + Vector3.new(0, 6, 0)
+local finalOffset = 6
+local platformSize = Vector3.new(10,1,10)
+
+if label == "CLAIM ZONE" then
+	finalOffset = 18
+	platformSize = Vector3.new(18,1,18)
+end
+
+local finalPos = pos + Vector3.new(0, finalOffset, 0)
 
 local finalPlatform = Instance.new("Part")
-finalPlatform.Size = Vector3.new(10,1,10)
+finalPlatform.Size = platformSize
 finalPlatform.Anchored = true
 finalPlatform.CanCollide = true
 finalPlatform.Transparency = 1
 finalPlatform.Position = finalPos - Vector3.new(0,4,0)
 finalPlatform.Parent = workspace
 
-game:GetService("Debris"):AddItem(finalPlatform, 6)
+game:GetService("Debris"):AddItem(finalPlatform, 8)
 
 root.AssemblyLinearVelocity = Vector3.zero
 root.CFrame = CFrame.new(finalPos)
@@ -438,7 +517,7 @@ for i,pos in ipairs(positions) do
 	b.Parent = scroll
 
 	b.MouseButton1Click:Connect(function()
-		tp(pos, stroke)
+	tp(pos, stroke, labels[i])
 	end)
 end
 
