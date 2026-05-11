@@ -276,7 +276,9 @@ Instance.new("UICorner", toggleButton).CornerRadius = UDim.new(1,0)
 local overlay = Instance.new("Frame", gui)
 overlay.Size = UDim2.new(1,0,1,0)
 overlay.BackgroundColor3 = Color3.fromRGB(120,0,180)
+overlay.BackgroundTransparency = 0.15
 overlay.Visible = false
+overlay.ZIndex = 999
 
 local txt = Instance.new("TextLabel", overlay)
 txt.Size = UDim2.new(1,0,1,0)
@@ -284,13 +286,42 @@ txt.BackgroundTransparency = 1
 txt.Font = Enum.Font.GothamBlack
 txt.TextSize = 48
 txt.TextColor3 = Color3.new(1,1,1)
+txt.Text = ""
+txt.ZIndex = 1000
 
+local overlayAnimating = false
 
+local function startOverlayAnimation()
+	overlayAnimating = true
+
+	task.spawn(function()
+		local dots = 0
+
+		while overlayAnimating do
+			dots += 1
+			if dots > 3 then
+				dots = 0
+			end
+
+			txt.Text = "TELEPORTING" .. string.rep(".", dots)
+
+			txt.Rotation += 1
+
+			task.wait(0.35)
+		end
+	end)
+end
+
+local function stopOverlayAnimation()
+	overlayAnimating = false
+	txt.Rotation = 0
+end
 ----------------------------------------------------------------
 -- MOVEMENT SYSTEM
 ----------------------------------------------------------------
 
 local moving = false
+local noclipEnabled = false
 
 UIS.JumpRequest:Connect(function()
 	if infiniteJumpEnabled then
@@ -303,16 +334,29 @@ UIS.JumpRequest:Connect(function()
 	end
 end)
 
+game:GetService("RunService").Stepped:Connect(function()
+	if noclipEnabled then
+		local character = plr.Character
+		if character then
+			for _, part in pairs(character:GetDescendants()) do
+				if part:IsA("BasePart") then
+					part.CanCollide = false
+				end
+			end
+		end
+	end
+end)
+
 local function makeSafePlatform(pos, size, life)
 	local p = Instance.new("Part")
-	p.Size = size or Vector3.new(16, 1, 16)
+	p.Size = size or Vector3.new(18,1,18)
 	p.Anchored = true
 	p.CanCollide = true
 	p.Transparency = 1
-	p.Position = pos - Vector3.new(0, 4, 0)
+	p.Position = pos - Vector3.new(0,4,0)
 	p.Name = "ZenithSafePlatform"
 	p.Parent = workspace
-	game:GetService("Debris"):AddItem(p, life or 12)
+	game:GetService("Debris"):AddItem(p, life or 15)
 	return p
 end
 
@@ -320,30 +364,51 @@ local function tp(pos, buttonStroke, label)
 	if moving then return end
 	moving = true
 
+	overlay.Visible = true
+	startOverlayAnimation()
+
 	local c = plr.Character or plr.CharacterAdded:Wait()
+	local humanoid = c:WaitForChild("Humanoid")
 	local root = c:WaitForChild("HumanoidRootPart")
 
-	if buttonStroke then
-		buttonStroke.Color = Color3.fromRGB(0,255,0)
+noclipEnabled = true
+	humanoid.WalkSpeed = 42
+-- WALK UNTIL 100 STUDS AWAY, BUT KEEP REFRESHING MoveTo
+while (root.Position - pos).Magnitude > 100 do
+	humanoid:MoveTo(pos)
+
+	for _, v in pairs(c:GetDescendants()) do
+		if v:IsA("BasePart") then
+			v.CanCollide = false
+		end
 	end
 
-	overlay.Visible = true
+	task.wait(0.5)
+
+	if not c.Parent or humanoid.Health <= 0 then
+		moving = false
+		noclipEnabled = false
+		stopOverlayAnimation()
+		overlay.Visible = false
+		return
+	end
+end 
+
+
 
 	local startPos = root.Position
 	local safeHeight = 6
 
 	local steps = {
-	startPos:Lerp(pos, 0.16) + Vector3.new(0, safeHeight, 0),
-	startPos:Lerp(pos, 0.33) + Vector3.new(0, safeHeight, 0),
-	startPos:Lerp(pos, 0.50) + Vector3.new(0, safeHeight, 0),
-	startPos:Lerp(pos, 0.66) + Vector3.new(0, safeHeight, 0),
-	startPos:Lerp(pos, 0.83) + Vector3.new(0, safeHeight, 0),
-	pos + Vector3.new(0, safeHeight, 0)
-}
+		startPos:Lerp(pos, 0.16) + Vector3.new(0, safeHeight, 0),
+		startPos:Lerp(pos, 0.33) + Vector3.new(0, safeHeight, 0),
+		startPos:Lerp(pos, 0.50) + Vector3.new(0, safeHeight, 0),
+		startPos:Lerp(pos, 0.66) + Vector3.new(0, safeHeight, 0),
+		startPos:Lerp(pos, 0.83) + Vector3.new(0, safeHeight, 0),
+		pos + Vector3.new(0, safeHeight, 0)
+	}
 
-	for i, stepPos in ipairs(steps) do
-		txt.Text = "STEP " .. i .. "/6"
-
+	for _, stepPos in ipairs(steps) do
 		makeSafePlatform(stepPos, Vector3.new(18,1,18), 15)
 
 		root.AssemblyLinearVelocity = Vector3.zero
@@ -352,7 +417,7 @@ local function tp(pos, buttonStroke, label)
 
 		local startCFrame = root.CFrame
 		local goalCFrame = CFrame.new(stepPos)
-		local slideTime = 1
+		local slideTime = 0.75
 		local startTime = os.clock()
 
 		while os.clock() - startTime < slideTime do
@@ -380,7 +445,10 @@ local function tp(pos, buttonStroke, label)
 	task.wait(0.25)
 
 	root.Anchored = false
-	overlay.Visible = false
+	noclipEnabled = false
+
+	stopOverlayAnimation()
+overlay.Visible = false
 
 	if buttonStroke then
 		buttonStroke.Color = Color3.fromRGB(255,0,0)
@@ -438,7 +506,11 @@ for i,pos in ipairs(positions) do
 
 	local stroke = Instance.new("UIStroke")
 	stroke.Thickness = 3
+	if labels[i] == "CARD SHOP" or labels[i] == "CLAIM ZONE" then
+	stroke.Color = Color3.fromRGB(255,255,255)
+else
 	stroke.Color = Color3.fromRGB(0,255,0)
+end
 	stroke.Parent = b
 
 	b.Parent = scroll
